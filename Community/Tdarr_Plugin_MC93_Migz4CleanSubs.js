@@ -28,6 +28,15 @@ function details() {
   	            false`
             },
             {
+                name: 'pgs',
+                tooltip: `Specify if PGS subtitle tracks should be removed.
+  	            \\nExample:\\n
+  	            true
+
+  	            \\nExample:\\n
+  	            false`
+            },
+            {
                 name: 'tag_language',
                 tooltip: `Specify a single language for subtitle tracks with no language or unknown language to be tagged with, leave empty to disable. Must follow ISO-639-2 3 letter format. https://en.wikipedia.org/wiki/List_of_ISO_639-2_codes
   	            \\nExample:\\n
@@ -90,12 +99,22 @@ function plugin(file, librarySettings, inputs) {
             // Check if inputs.commentary is set to true AND if stream is subtitle AND then checks for stream titles with the following "commentary, description, sdh". Removing any streams that are applicable.
             if (inputs.commentary.toLowerCase() == "true" && file.ffProbeData.streams[i].codec_type.toLowerCase() == "subtitle" && (file.ffProbeData.streams[i].tags.title.toLowerCase().includes('commentary') || file.ffProbeData.streams[i].tags.title.toLowerCase().includes('description') || file.ffProbeData.streams[i].tags.title.toLowerCase().includes('sdh'))) {
                 ffmpegCommandInsert += `-map -0:s:${subtitleIdx} `
-                response.infoLog += `☒Subtitle stream detected as being Commentary or Description, removing. Subtitle stream 0:s:${SubtitleIdx} - ${file.ffProbeData.streams[i].tags.title}. \n`
+                response.infoLog += `☒Subtitle stream detected as being Commentary or Description, removing. Subtitle stream 0:s:${subtitleIdx} - ${file.ffProbeData.streams[i].tags.title}. \n`
                 convert = true
             }
         } catch (err) {}
 
-        // Check if inputs.tag_language has something entered (Entered means user actually wants something to happen, empty would disable this) AND checks that stream is subtitle.
+        // Catch error here incase the title metadata is completely missing.
+        try {
+            // Check if inputs.pgs is set to true AND if stream is subtitle AND then checks for stream codec name with the following "pgs". Removing any streams that are applicable.
+            if (inputs.pgs.toLowerCase() == "true" && file.ffProbeData.streams[i].codec_type.toLowerCase() == "subtitle" && file.ffProbeData.streams[i].codec_name.toLowerCase().includes('pgs')) {
+                ffmpegCommandInsert += `-map -0:s:${subtitleIdx} `
+                response.infoLog += `☒Subtitle stream detected as being PGS, removing. Subtitle stream 0:s:${subtitleIdx} - ${file.ffProbeData.streams[i].codec_name}. \n`
+                convert = true
+            }
+        } catch (err) {}
+
+        // Check if inputs.tag_language has something entered (Entered means user actually wants something to happen, empty would disable this) AND checks that stream is audio.
         if (inputs.tag_language != "" && file.ffProbeData.streams[i].codec_type.toLowerCase() == "subtitle") {
             // Catch error here incase the metadata is completely missing.
             try {
